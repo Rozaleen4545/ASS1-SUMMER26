@@ -25,9 +25,15 @@ const STORAGE_KEY = "ssp_session_v1";
  * - use regex, not DOM APIs
  */
 function sanitizeUsername(input) {
-  input = String(input);
-  const sanit = input.replace(/[^A-Za-z0-9_-]/g, "_");
-  return sanit.slice(0, 20);
+  let username = String(input);
+
+  username = username.replace(/[^a-zA-Z0-9_-]/g, "_");
+
+  if (username.length > 20) {
+    username = username.substring(0, 20);
+  }
+
+  return username;
 }
 
 /**
@@ -39,13 +45,13 @@ function sanitizeUsername(input) {
  * - MUST use textContent (not innerHTML)
  */
 function renderNotifications(listEl, notifications) {
-  listEl.textContent = "";
+   listEl.textContent = "";
 
-  for (const notification of notifications) {
-    const li = document.createElement("li");
-    li.textContent = notification;
-    listEl.appendChild(li);
-}
+  notifications.forEach(function(notification) {
+    const item = document.createElement("li");
+    item.textContent = notification;
+    listEl.appendChild(item);
+  });
 }
 
 /** -----------------------------
@@ -154,28 +160,28 @@ localStorage.setItem(STORAGE_KEY, JSON.stringify(session));
  */
 function loadSessionFromStorage() {
   try {
-  const raw = localStorage.getItem(STORAGE_KEY);
+    const storedData = localStorage.getItem(STORAGE_KEY);
 
-  if (!raw) {
+    if (storedData === null) {
+      return null;
+    }
+
+    const session = JSON.parse(storedData);
+
+    if (
+      typeof session.displayName === "string" &&
+      typeof session.role === "string"
+    ) {
+      return {
+        displayName: session.displayName,
+        role: session.role
+      };
+    }
+
+    return null;
+  } catch {
     return null;
   }
-
-  const data = JSON.parse(raw);
-
-  if (
-    typeof data.displayName !== "string" ||
-    typeof data.role !== "string"
-  ) {
-    return null;
-  }
-
-  return {
-    displayName: data.displayName,
-    role: data.role
-  };
-} catch (error) {
-  return null;
-}
 }
 
 /** -----------------------------
@@ -193,10 +199,9 @@ function loadSessionFromStorage() {
  * client-side logic can be manipulated; real authorization is server-side.
  */
 function computeAccessStatus(profile) {
-  if (profile && profile.role === "admin") {
-  return "GRANTED";
-}
-  return "DENIED";
+   return profile && profile.role === "admin"
+    ? "GRANTED"
+    : "DENIED";
 }
 
 /** -----------------------------
